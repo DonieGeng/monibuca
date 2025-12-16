@@ -1,0 +1,91 @@
+syntax = "proto3";
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "global.proto";
+package raw;
+option go_package="m7s.live/v5/plugin/raw/pb";
+
+service api {
+  rpc SubscribeRaw(SubscribeRawRequest) returns (stream RawFrame) {
+  }
+
+  // 取消订阅
+  rpc UnsubscribeRaw(SubscribeRawRequest) returns (global.SuccessResponse) {
+    option (google.api.http) = {
+      post: "/raw/api/unsubscribe/{streamPath=**}"
+    };
+  }
+
+  // 取消所有订阅
+  rpc UnsubscribeAllRaw(google.protobuf.Empty) returns (global.SuccessResponse) {
+    option (google.api.http) = {
+      post: "/raw/api/unsubscribe"
+    };
+  }
+
+  rpc GetSubscribeRawList(google.protobuf.Empty) returns (SubscribeListResponse) {
+    option (google.api.http) = {
+      get: "/raw/api/getsubscribe"
+    };
+  }
+}
+
+// 订阅请求
+message SubscribeRawRequest {
+  string streamPath = 1;        // 流路径，例如: "live/stream1"
+  bool include_audio = 2;        // 是否包含音频数据
+  bool include_video = 3;        // 是否包含视频数据
+}
+
+message StreamInfoRequest {
+  string streamPath = 1;        // 流路径，例如: "live/stream1"
+}
+
+message RawFrame {
+  string streamPath = 1;        // 流路径
+  FrameType frame_type = 2;      // 帧类型 (音频/视频)
+  int64 timestamp = 3;          // 时间戳
+  bytes nal_data = 4;            // NAL单元数据
+  bool is_keyframe = 6;          // 是否是关键帧
+  CodecInfo codec_info = 7;      // 编解码器信息
+  int64 size = 9;               // 数据大小
+}
+
+message SubscribeListResponse {
+  int32 code = 1;
+  string message = 2;
+  repeated string streamPath = 3;
+}
+
+// 帧类型枚举
+enum FrameType {
+  UNKNOWN = 0;
+  AUDIO = 1;
+  VIDEO = 2;
+}
+
+// 编解码器信息
+message CodecInfo {
+  string codec_name = 1;         // 编解码器名称 (H264, H265, AAC等)
+  int64 width = 2;              // 视频宽度 (仅视频)
+  int64 height = 3;             // 视频高度 (仅视频)
+  int64 fps = 4;                // 视频帧率 (仅视频)
+  int64 sample_rate = 5;        // 音频采样率 (仅音频)
+  int64 channels = 6;           // 音频通道数 (仅音频)
+}
+
+// 流列表响应
+message StreamListResponse {
+  repeated StreamInfo streams = 1;  // 可用的流列表
+}
+
+// 流信息
+message StreamInfo {
+  string stream_path = 1;        // 流路径
+  string stream_type = 2;        // 流类型
+  //google.protobuf.Timestamp created_time = 3;  // 创建时间
+  bool has_audio = 4;            // 是否有音频
+  bool has_video = 5;            // 是否有视频
+  CodecInfo audio_codec = 6;     // 音频编解码器信息
+  CodecInfo video_codec = 7;     // 视频编解码器信息
+}
